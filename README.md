@@ -13,6 +13,13 @@ Há também um **frontend** simples (nginx, porta 80) que serve uma página HTML
 as chamadas `/courts` e `/matches` para cada serviço — é uma demonstração visual da
 comunicação entre eles.
 
+A página permite:
+
+- listar e **cadastrar quadras** (`POST /courts`);
+- criar partidas escolhendo uma quadra ou **digitando um id inexistente** para ver o erro 400;
+- **apagar reservas** (`DELETE /matches/{id}`);
+- visualizar o **conflito de horário** (409) ao tentar reservar a mesma quadra no mesmo horário.
+
 ## Estrutura
 
 ```
@@ -44,6 +51,14 @@ Testar:
 curl localhost:8001/courts
 curl -X POST localhost:8002/matches -H 'Content-Type: application/json' \
   -d '{"court_id":"<id de uma quadra>","title":"Pelada Quinta","date":"2026-10-02","start_time":"20:00","end_time":"21:30"}'
+```
+
+Repetindo o mesmo `POST` (mesma quadra, data e horário) a resposta é
+**409 `{"detail":"Ja existe uma reserva nesse horario para esta quadra"}`**.
+Apagar uma reserva:
+
+```bash
+curl -X DELETE localhost:8002/matches/<id da partida>   # HTTP 204
 ```
 
 Frontend (demonstração visual): http://localhost

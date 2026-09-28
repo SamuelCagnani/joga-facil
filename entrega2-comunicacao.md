@@ -38,6 +38,10 @@ Cliente
 - Se a quadra não existe, o `court-service` responde 404 e o `match-service` devolve
   **400 "Quadra nao encontrada no court-service"** para o cliente.
 - Se o `court-service` estiver fora do ar, o `match-service` devolve **503**.
+- Se já existir uma reserva para a **mesma quadra e data com sobreposição de horário**, o
+  `match-service` devolve **409 "Ja existe uma reserva nesse horario para esta quadra"**.
+  A checagem é feita no próprio `match-service` (dono das partidas) e fica sob um lock,
+  evitando duas reservas simultâneas no mesmo horário.
 - Isso comprova que a resposta do `match-service` depende de uma chamada real ao
   `court-service` (o campo `court_name` nem é enviado pelo cliente; ele vem da outra API).
 
@@ -81,11 +85,12 @@ environment:
 
 ### match-service (8002)
 
-| Método | Rota        | Descrição                                         |
-| ------ | ----------- | ------------------------------------------------- |
-| GET    | `/health`   | Status do serviço                                 |
-| POST   | `/matches`  | Cria partida (consulta o court-service via REST)  |
-| GET    | `/matches`  | Lista as partidas criadas                         |
+| Método | Rota                  | Descrição                                             |
+| ------ | --------------------- | ----------------------------------------------------- |
+| GET    | `/health`             | Status do serviço                                     |
+| POST   | `/matches`            | Cria partida (consulta o court-service via REST)      |
+| GET    | `/matches`            | Lista as partidas criadas                             |
+| DELETE | `/matches/{match_id}` | Apaga uma reserva (204; 404 se não existir)           |
 
 ## 5. Como reproduzir (local)
 
@@ -151,6 +156,10 @@ Para facilitar a demonstração foi adicionada uma página HTML simples em
 - A página lista as quadras, lista as partidas e permite criar partidas. Ao criar uma
   partida, a resposta exibida mostra o campo `court_name`, que veio do `court-service`,
   tornando a comunicação entre os serviços visível na tela.
+- Ela também permite **cadastrar quadras** (`POST /courts`), **apagar reservas**
+  (`DELETE /matches/{id}`) e digitar um **id de quadra inexistente** no campo de quadra
+  (input com sugestões) para ver o erro 400. Ao tentar reservar um horário já ocupado da
+  mesma quadra, a página exibe o 409.
 
 Acesso local: http://localhost
 Acesso na AWS: http://<ip-publico> (ex.: http://44.192.85.121)
