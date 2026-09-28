@@ -18,7 +18,10 @@
     label { display: flex; flex-direction: column; font-size: 12px; color: #555; }
     input, select { padding: 6px; }
     pre { background: #111; color: #0f0; padding: 12px; border-radius: 6px; overflow: auto; }
+    pre.erro { color: #ff6b6b; }
     .ok { color: #0a7d2c; font-weight: bold; }
+    .erro-msg { color: #c0392b; font-weight: bold; }
+    .apagar { background: #fdecea; border: 1px solid #c0392b; color: #c0392b; border-radius: 4px; padding: 4px 8px; }
   </style>
 </head>
 <body>
@@ -35,12 +38,21 @@
       <thead><tr><th>ID</th><th>Nome</th><th>Endereco</th><th>Preco/hora</th></tr></thead>
       <tbody></tbody>
     </table>
+
+    <h2 style="margin-top:16px">Cadastrar Quadra</h2>
+    <form id="form-quadra">
+      <label>Nome <input id="novo-nome" placeholder="Arena Nova" required></label>
+      <label>Endereco <input id="novo-endereco" placeholder="Rua C, 300" required></label>
+      <label>Preco/hora <input id="novo-preco" type="number" min="0" step="0.01" value="100" required></label>
+      <button type="submit">Cadastrar</button>
+    </form>
+    <p id="aviso-quadra" class="ok"></p>
   </section>
 
   <section>
     <h2>Partidas (match-service) <button onclick="carregarPartidas()">Atualizar</button></h2>
     <table id="tabela-partidas">
-      <thead><tr><th>ID</th><th>Titulo</th><th>Quadra</th><th>Data</th><th>Horario</th><th>Jogadores</th><th>Preco</th></tr></thead>
+      <thead><tr><th>ID</th><th>Titulo</th><th>Quadra</th><th>Data</th><th>Horario</th><th>Jogadores</th><th>Preco</th><th>Acoes</th></tr></thead>
       <tbody></tbody>
     </table>
     <p id="aviso-comunicacao" class="ok"></p>
@@ -49,7 +61,7 @@
   <section>
     <h2>Criar Partida</h2>
     <form id="form-partida">
-      <label>Quadra <select id="court_id" required></select></label>
+      <label>Quadra <input id="court_id" list="quadras-lista" placeholder="escolha ou digite um id" required><datalist id="quadras-lista"></datalist></label>
       <label>Titulo <input id="title" value="Pelada Quinta" required></label>
       <label>Data <input id="date" type="date" value="2026-10-02" required></label>
       <label>Inicio <input id="start_time" type="time" value="20:00" required></label>
@@ -62,19 +74,25 @@
   </section>
 
   <script>
+    function mostrarResposta(status, dados) {
+      const pre = document.getElementById('resultado');
+      pre.textContent = 'HTTP ' + status + '\n' + JSON.stringify(dados, null, 2);
+      pre.className = status >= 200 && status < 300 ? '' : 'erro';
+    }
+
     async function carregarQuadras() {
       const resposta = await fetch('/courts');
       const quadras = await resposta.json();
 
       const tbody = document.querySelector('#tabela-quadras tbody');
       tbody.innerHTML = '';
-      const select = document.getElementById('court_id');
-      select.innerHTML = '';
+      const lista = document.getElementById('quadras-lista');
+      lista.innerHTML = '';
 
       for (const quadra of quadras) {
         tbody.innerHTML += `<tr><td>${quadra.id}</td><td>${quadra.name}</td>` +
                            `<td>${quadra.address}</td><td>R$ ${quadra.price_per_hour}</td></tr>`;
-        select.innerHTML += `<option value="${quadra.id}">${quadra.name}</option>`;
+        lista.innerHTML += `<option value="${quadra.id}" label="${quadra.name}">${quadra.name}</option>`;
       }
     }
 
@@ -88,9 +106,50 @@
         tbody.innerHTML += `<tr><td>${partida.id}</td><td>${partida.title}</td>` +
                            `<td>${partida.court_name}</td><td>${partida.date}</td>` +
                            `<td>${partida.start_time} - ${partida.end_time}</td>` +
-                           `<td>${partida.max_players}</td><td>R$ ${partida.price_per_player}</td></tr>`;
+                           `<td>${partida.max_players}</td><td>R$ ${partida.price_per_player}</td>` +
+                           `<td><button class="apagar" onclick="apagarPartida('${partida.id}')">Apagar</button></td></tr>`;
       }
     }
+
+    async function apagarPartida(id) {
+      const resposta = await fetch('/matches/' + id, { method: 'DELETE' });
+      if (resposta.status === 204) {
+        document.getElementById('resultado').className = '';
+        document.getElementById('resultado').textContent = 'Reserva ' + id + ' apagada.';
+      } else {
+        const dados = await resposta.json();
+        mostrarResposta(resposta.status, dados);
+      }
+      carregarPartidas();
+    }
+
+    document.getElementById('form-quadra').addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+
+      const corpo = {
+        name: document.getElementById('novo-nome').value,
+        address: document.getElementById('novo-endereco').value,
+        price_per_hour: Number(document.getElementById('novo-preco').value)
+      };
+
+      const resposta = await fetch('/courts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpo)
+      });
+      const dados = await resposta.json();
+
+      const aviso = document.getElementById('aviso-quadra');
+      if (resposta.status === 201) {
+        aviso.className = 'ok';
+        aviso.textContent = 'Quadra "' + dados.name + '" cadastrada com id ' + dados.id + '.';
+        evento.target.reset();
+      } else {
+        aviso.className = 'erro-msg';
+        aviso.textContent = 'HTTP ' + resposta.status + ': ' + JSON.stringify(dados);
+      }
+      carregarQuadras();
+    });
 
     document.getElementById('form-partida').addEventListener('submit', async (evento) => {
       evento.preventDefault();
@@ -112,13 +171,17 @@
       });
       const dados = await resposta.json();
 
-      document.getElementById('resultado').textContent =
-        'HTTP ' + resposta.status + '\n' + JSON.stringify(dados, null, 2);
+      mostrarResposta(resposta.status, dados);
 
+      const aviso = document.getElementById('aviso-comunicacao');
       if (resposta.status === 201) {
-        document.getElementById('aviso-comunicacao').textContent =
+        aviso.className = 'ok';
+        aviso.textContent =
           'Atencao: o campo court_name ("' + dados.court_name +
           '") nao foi enviado pelo formulario - ele veio do court-service via REST.';
+      } else {
+        aviso.className = 'erro-msg';
+        aviso.textContent = dados.detail || 'Erro ao criar a partida.';
       }
       carregarPartidas();
     });
