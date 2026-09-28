@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JogaFacil - Demo Entrega 2</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #222; }
+    h1 { margin-bottom: 4px; }
+    .sub { color: #666; margin-top: 0; }
+    section { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-top: 20px; }
+    h2 { margin-top: 0; font-size: 18px; }
+    button { cursor: pointer; padding: 6px 12px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+    th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; font-size: 14px; }
+    th { background: #f4f4f4; }
+    form { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+    label { display: flex; flex-direction: column; font-size: 12px; color: #555; }
+    input, select { padding: 6px; }
+    pre { background: #111; color: #0f0; padding: 12px; border-radius: 6px; overflow: auto; }
+    .ok { color: #0a7d2c; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>JogaFacil - Entrega 2</h1>
+  <p class="sub">
+    Dois servicos FastAPI comunicando via REST: <b>court-service</b> (quadras) e
+    <b>match-service</b> (partidas). A pagina e servida pelo nginx, que encaminha
+    <code>/courts</code> e <code>/matches</code> para cada servico.
+  </p>
+
+  <section>
+    <h2>Quadras (court-service) <button onclick="carregarQuadras()">Atualizar</button></h2>
+    <table id="tabela-quadras">
+      <thead><tr><th>ID</th><th>Nome</th><th>Endereco</th><th>Preco/hora</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Partidas (match-service) <button onclick="carregarPartidas()">Atualizar</button></h2>
+    <table id="tabela-partidas">
+      <thead><tr><th>ID</th><th>Titulo</th><th>Quadra</th><th>Data</th><th>Horario</th><th>Jogadores</th><th>Preco</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p id="aviso-comunicacao" class="ok"></p>
+  </section>
+
+  <section>
+    <h2>Criar Partida</h2>
+    <form id="form-partida">
+      <label>Quadra <select id="court_id" required></select></label>
+      <label>Titulo <input id="title" value="Pelada Quinta" required></label>
+      <label>Data <input id="date" type="date" value="2026-10-02" required></label>
+      <label>Inicio <input id="start_time" type="time" value="20:00" required></label>
+      <label>Fim <input id="end_time" type="time" value="21:30" required></label>
+      <label>Vagas <input id="max_players" type="number" value="12" required></label>
+      <label>Preco/jogador <input id="price_per_player" type="number" value="20" required></label>
+      <button type="submit">Criar</button>
+    </form>
+    <pre id="resultado">A resposta da API aparece aqui.</pre>
+  </section>
+
+  <script>
+    async function carregarQuadras() {
+      const resposta = await fetch('/courts');
+      const quadras = await resposta.json();
+
+      const tbody = document.querySelector('#tabela-quadras tbody');
+      tbody.innerHTML = '';
+      const select = document.getElementById('court_id');
+      select.innerHTML = '';
+
+      for (const quadra of quadras) {
+        tbody.innerHTML += `<tr><td>${quadra.id}</td><td>${quadra.name}</td>` +
+                           `<td>${quadra.address}</td><td>R$ ${quadra.price_per_hour}</td></tr>`;
+        select.innerHTML += `<option value="${quadra.id}">${quadra.name}</option>`;
+      }
+    }
+
+    async function carregarPartidas() {
+      const resposta = await fetch('/matches');
+      const partidas = await resposta.json();
+
+      const tbody = document.querySelector('#tabela-partidas tbody');
+      tbody.innerHTML = '';
+      for (const partida of partidas) {
+        tbody.innerHTML += `<tr><td>${partida.id}</td><td>${partida.title}</td>` +
+                           `<td>${partida.court_name}</td><td>${partida.date}</td>` +
+                           `<td>${partida.start_time} - ${partida.end_time}</td>` +
+                           `<td>${partida.max_players}</td><td>R$ ${partida.price_per_player}</td></tr>`;
+      }
+    }
+
+    document.getElementById('form-partida').addEventListener('submit', async (evento) => {
+      evento.preventDefault();
+
+      const corpo = {
+        court_id: document.getElementById('court_id').value,
+        title: document.getElementById('title').value,
+        date: document.getElementById('date').value,
+        start_time: document.getElementById('start_time').value,
+        end_time: document.getElementById('end_time').value,
+        max_players: Number(document.getElementById('max_players').value),
+        price_per_player: Number(document.getElementById('price_per_player').value)
+      };
+
+      const resposta = await fetch('/matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(corpo)
+      });
+      const dados = await resposta.json();
+
+      document.getElementById('resultado').textContent =
+        'HTTP ' + resposta.status + '\n' + JSON.stringify(dados, null, 2);
+
+      if (resposta.status === 201) {
+        document.getElementById('aviso-comunicacao').textContent =
+          'Atencao: o campo court_name ("' + dados.court_name +
+          '") nao foi enviado pelo formulario - ele veio do court-service via REST.';
+      }
+      carregarPartidas();
+    });
+
+    carregarQuadras();
+    carregarPartidas();
+  </script>
+</body>
+</html>
