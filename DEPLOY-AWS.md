@@ -137,7 +137,8 @@ Se não aparecer nada, não há instância rodando/cobrando.
 
 ## Observações de segurança / rede
 
-- O Security Group `jogafacil-sg` libera: `22` (SSH, restrita ao IP `189.93.250.76/32`),
+- O Security Group `jogafacil-sg` libera: `22` (SSH, restrita ao IP do desenvolvedor — muda com
+  frequência, veja a seção "Se o SSH parar de funcionar" abaixo),
   `80`, `8001` e `8002` (0.0.0.0/0).
 - Os serviços rodam na mesma rede do Docker Compose; o `match-service` fala com o
   `court-service` por `http://court-service:8001` (DNS interno do Compose).
