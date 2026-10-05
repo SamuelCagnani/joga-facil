@@ -35,7 +35,7 @@
   <section>
     <h2>Quadras (court-service) <button onclick="carregarQuadras()">Atualizar</button></h2>
     <table id="tabela-quadras">
-      <thead><tr><th>ID</th><th>Nome</th><th>Endereco</th><th>Preco/hora</th></tr></thead>
+      <thead><tr><th>ID</th><th>Nome</th><th>Endereco</th><th>Preco/hora</th><th>Acoes</th></tr></thead>
       <tbody></tbody>
     </table>
 
@@ -91,9 +91,24 @@
 
       for (const quadra of quadras) {
         tbody.innerHTML += `<tr><td>${quadra.id}</td><td>${quadra.name}</td>` +
-                           `<td>${quadra.address}</td><td>R$ ${quadra.price_per_hour}</td></tr>`;
+                           `<td>${quadra.address}</td><td>R$ ${quadra.price_per_hour}</td>` +
+                           `<td><button class="apagar" onclick="apagarQuadra('${quadra.id}')">Apagar</button></td></tr>`;
         lista.innerHTML += `<option value="${quadra.id}" label="${quadra.name}">${quadra.name}</option>`;
       }
+    }
+
+    async function apagarQuadra(id) {
+      const resposta = await fetch('/courts/' + id, { method: 'DELETE' });
+      const aviso = document.getElementById('aviso-quadra');
+      if (resposta.status === 204) {
+        aviso.className = 'ok';
+        aviso.textContent = 'Quadra ' + id + ' apagada.';
+      } else {
+        const dados = await resposta.json();
+        aviso.className = 'erro-msg';
+        aviso.textContent = 'HTTP ' + resposta.status + ': ' + (dados.detail || JSON.stringify(dados));
+      }
+      carregarQuadras();
     }
 
     async function carregarPartidas() {
@@ -146,7 +161,7 @@
         evento.target.reset();
       } else {
         aviso.className = 'erro-msg';
-        aviso.textContent = 'HTTP ' + resposta.status + ': ' + JSON.stringify(dados);
+        aviso.textContent = 'HTTP ' + resposta.status + ': ' + (dados.detail || JSON.stringify(dados));
       }
       carregarQuadras();
     });

@@ -76,12 +76,13 @@ environment:
 
 ### court-service (8001)
 
-| Método | Rota                 | Descrição                    |
-| ------ | -------------------- | ---------------------------- |
-| GET    | `/health`            | Status do serviço            |
-| POST   | `/courts`            | Cadastra uma quadra          |
-| GET    | `/courts`            | Lista todas as quadras       |
-| GET    | `/courts/{court_id}` | Consulta uma quadra pelo id  |
+| Método | Rota                 | Descrição                                                 |
+| ------ | -------------------- | --------------------------------------------------------- |
+| GET    | `/health`            | Status do serviço                                         |
+| POST   | `/courts`            | Cadastra uma quadra (409 se nome+endereço já existirem)   |
+| GET    | `/courts`            | Lista todas as quadras                                    |
+| GET    | `/courts/{court_id}` | Consulta uma quadra pelo id                               |
+| DELETE | `/courts/{court_id}` | Apaga uma quadra (204; 404 se não existir)                |
 
 ### match-service (8002)
 
@@ -156,10 +157,11 @@ Para facilitar a demonstração foi adicionada uma página HTML simples em
 - A página lista as quadras, lista as partidas e permite criar partidas. Ao criar uma
   partida, a resposta exibida mostra o campo `court_name`, que veio do `court-service`,
   tornando a comunicação entre os serviços visível na tela.
-- Ela também permite **cadastrar quadras** (`POST /courts`), **apagar reservas**
-  (`DELETE /matches/{id}`) e digitar um **id de quadra inexistente** no campo de quadra
-  (input com sugestões) para ver o erro 400. Ao tentar reservar um horário já ocupado da
-  mesma quadra, a página exibe o 409.
+- Ela também permite **cadastrar quadras** (`POST /courts`), **apagar quadras**
+  (`DELETE /courts/{id}`), **apagar reservas** (`DELETE /matches/{id}`) e digitar um
+  **id de quadra inexistente** no campo de quadra (input com sugestões) para ver o erro 400.
+  Ao tentar reservar um horário já ocupado da mesma quadra, a página exibe o 409; ao
+  cadastrar uma quadra com **nome e endereço já existentes**, exibe o 409 de duplicidade.
 
 Acesso local: http://localhost
 Acesso na AWS: http://<ip-publico> (ex.: http://44.192.85.121)

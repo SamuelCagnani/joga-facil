@@ -15,10 +15,11 @@ comunicação entre eles.
 
 A página permite:
 
-- listar e **cadastrar quadras** (`POST /courts`);
+- listar, **cadastrar** (`POST /courts`) e **apagar quadras** (`DELETE /courts/{id}`);
 - criar partidas escolhendo uma quadra ou **digitando um id inexistente** para ver o erro 400;
 - **apagar reservas** (`DELETE /matches/{id}`);
-- visualizar o **conflito de horário** (409) ao tentar reservar a mesma quadra no mesmo horário.
+- visualizar o **conflito de horário** (409) ao tentar reservar a mesma quadra no mesmo horário;
+- visualizar o **bloqueio de quadra duplicada** (409) ao cadastrar duas quadras com mesmo nome e endereço.
 
 ## Estrutura
 
@@ -59,6 +60,14 @@ Apagar uma reserva:
 
 ```bash
 curl -X DELETE localhost:8002/matches/<id da partida>   # HTTP 204
+```
+
+Cadastrar duas quadras com o mesmo nome e endereço retorna
+**409 `{"detail":"Ja existe uma quadra com esse nome e endereco"}`**.
+Apagar uma quadra:
+
+```bash
+curl -X DELETE localhost:8001/courts/<id da quadra>     # HTTP 204 (404 se nao existir)
 ```
 
 Frontend (demonstração visual): http://localhost
